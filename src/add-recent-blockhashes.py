@@ -16,11 +16,12 @@ def init():
         print("Connected to:" + w3.version.node)
         if w3.eth.syncing:
             print("Warning: ws node is syncing")
-        print('Enter the password:')
+        print('Enter the password!')
         pwd = input()
-        for account in w3.personal.listAccounts:
-            w3.personal.unlockAccount(account, pwd)
-        w3.eth.defaultAccount = w3.eth.accounts[0]
+        while not w3.personal.unlockAccount(w3.personal.listAccounts[1], pwd):
+            print('Enter the password!')
+            pwd = input()
+        w3.eth.defaultAccount = w3.eth.accounts[1]
         print('Accounts unlocked!')
         c = w3.eth.contract(abi=abi, bytecode=bin, address=addr)
         return w3, c, pwd
@@ -59,14 +60,14 @@ def insert_recent_blockhash(block_num):
 
 
 if __name__ == '__main__':
-    web3, contract, pwd = init()
+    web3, contract, password = init()
     while True:
         try:
             latest_block = web3.eth.getBlock('latest').number
             print('Latest block: %d' % latest_block)
             for i in range(250):
                 insert_recent_blockhash(latest_block - i)
-            web3.personal.unlockAccount(web3.eth.accounts[0], pwd)
+            web3.personal.unlockAccount(web3.eth.accounts[0], password)
             web3.eth.defaultAccount = web3.eth.accounts[0]
         except ValueError:
             continue

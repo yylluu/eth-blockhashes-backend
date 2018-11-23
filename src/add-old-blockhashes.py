@@ -1,3 +1,4 @@
+import time
 import rlp
 from web3 import Web3, WebsocketProvider
 from websockets import exceptions as websockets_errors
@@ -18,10 +19,11 @@ def init():
         print("Connected to:" + w3.version.node)
         if w3.eth.syncing:
             print("Warning: ws node is syncing")
-        print('Enter the password:')
+        print('Enter the password!')
         pwd = input()
-        for account in w3.personal.listAccounts:
-            w3.personal.unlockAccount(account, pwd)
+        while not w3.personal.unlockAccount(w3.personal.listAccounts[1], pwd):
+            print('Enter the password!')
+            pwd = input()
         w3.eth.defaultAccount = w3.eth.accounts[1]
         print('Accounts unlocked!')
         c = w3.eth.contract(abi=abi, bytecode=bin, address=addr)
@@ -53,23 +55,52 @@ def block_to_rlp_encoded_header(block_attr_dict):
     return rlp.encode(header)
 
 
-def insert_old_blockhash(block):
+def insert_old_blockhash(b_num):
     web3.personal.unlockAccount(web3.eth.accounts[1], pwd)
     web3.eth.defaultAccount = web3.eth.accounts[1]
-    if web3.toHex(contract.functions.get_blockhash(block + 1).call()) != ZERO:
-        child_header = web3.toHex(block_to_rlp_encoded_header(web3.eth.getBlock(block + 1)))
+    if web3.toHex(contract.functions.get_blockhash(b_num + 1).call()) != ZERO:
+        child_header = web3.toHex(block_to_rlp_encoded_header(web3.eth.getBlock(b_num + 1)))
         print(child_header)
-        print('Inserting hash of block at %d ...' % block)
+        print('Inserting hash of block at %d ...' % b_num)
         try:
-            print(contract.functions.add_old(block, child_header).estimateGas())
-            tx_hash = contract.functions.add_old(block, child_header).transact()
+            #print(contract.functions.add_old(b_num, child_header).estimateGas())
+            tx_hash = contract.functions.add_old(b_num, child_header).transact()
             print(web3.toHex(tx_hash))
             tx_receipt = web3.eth.waitForTransactionReceipt(tx_hash)
-            return web3.toHex(contract.functions.get_blockhash(block).call())
+            return web3.toHex(contract.functions.get_blockhash(b_num).call())
         except ValueError as e:
             print(e)
-            print(web3.eth.getBlock(block + 1))
+            print(web3.eth.getBlock(b_num + 1))
             return ZERO
+    else:
+        return ZERO
+
+
+def insert_many_old_blockhashes(b_num):
+    MANY = 32
+    web3.personal.unlockAccount(web3.eth.accounts[1], pwd)
+    web3.eth.defaultAccount = web3.eth.accounts[1]
+    nonce = web3.eth.getTransactionCount(web3.eth.accounts[1])
+    if web3.toHex(contract.functions.get_blockhash(b_num + 1).call()) != ZERO:
+        tx_hash = ZERO
+        for i in range(0, MANY):
+            child_header = web3.toHex(block_to_rlp_encoded_header(web3.eth.getBlock(b_num + 1 - i)))
+            print(child_header)
+            print('Inserting hash of block at %d ...' % (b_num - i))
+            try:
+                if web3.toHex(contract.functions.get_blockhash(b_num - i).call()) == ZERO:
+                    tx_hash = contract.functions.add_old(b_num - i, child_header)\
+                        .transact({'nonce': nonce + i, 'gas': 110000})
+                    time.sleep(1)
+                    print(web3.toHex(tx_hash))
+                else:
+                    print("hash has been stored... skipping")
+            except ValueError as e:
+                print(e)
+                print(web3.eth.getBlock(b_num + 1 - i))
+                return ZERO
+        tx_receipt = web3.eth.waitForTransactionReceipt(tx_hash)
+        return web3.toHex(contract.functions.get_blockhash(b_num - MANY + 1).call())
     else:
         return ZERO
 
@@ -77,19 +108,15 @@ def insert_old_blockhash(block):
 if __name__ == '__main__':
     web3, contract, pwd = init()
     latest_block = web3.eth.getBlock('latest').number
-
-    for block_num in range(4476961 - 1, 4000000 - 1, -1):
+    for block_num in range(4475101 - 1, 4000000 - 1, -1):
         if web3.toHex(contract.functions.get_blockhash(block_num).call()) == ZERO:
             try:
-                insert_old_blockhash(block_num)
+                insert_many_old_blockhashes(block_num)
+                #insert_old_blockhash(block_num)
             except ValueError:
                 continue
             except websockets_errors.ConnectionClosed:
                 exit(255)
-
-    # for block in range(4477000, latest_block):
-    #     if web3.toHex(contract.functions.get_blockhash(block).call()) == ZERO:
-    #         insert_old_blockhash(block)
 
 # Solidity source code
 '''
