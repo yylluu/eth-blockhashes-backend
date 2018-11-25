@@ -81,7 +81,7 @@ def insert_old_blockhash(b_num):
 
 
 def insert_many_old_blockhashes(b_num):
-    MANY = 50
+    MANY = 512
     contract_calls = [None] * MANY
     web3.personal.unlockAccount(web3.eth.accounts[0], pwd)
     web3.eth.defaultAccount = web3.eth.accounts[0]
@@ -97,31 +97,44 @@ def insert_many_old_blockhashes(b_num):
                     contract_function_add_old = contract.functions.add_old(b_num - i, child_header)
                     tx_hash = contract_function_add_old.transact({'nonce': nonce + i, 'gas': 110000})
                     contract_calls[i] = [tx_hash, contract_function_add_old, nonce+i]
-                    time.sleep(1)
+                    # time.sleep(1)
                     print(web3.toHex(tx_hash))
                 else:
                     print("hash has been stored... skipping")
-                    web3.eth.waitForTransactionReceipt(tx_hash)
-                    return web3.toHex(contract.functions.get_blockhash(b_num - i).call())
+                    try:
+                        web3.eth.waitForTransactionReceipt(tx_hash)
+                        while web3.eth.getBlock('latest').number - web3.eth.getTransactionReceipt(tx_hash).blockNumber < 2:
+                            time.sleep(1)
+                        return web3.toHex(contract.functions.get_blockhash(b_num - i).call())
+                    except:
+                        print('Doing something here to Handle timeout exception.')
+                        web3.eth.waitForTransactionReceipt(tx_hash, 1800)
+                        web3.personal.unlockAccount(web3.eth.accounts[0], pwd)
+                        return web3.toHex(contract.functions.get_blockhash(b_num - MANY + 1).call())
             except ValueError as e:
                 print(e)
                 print(web3.eth.getBlock(b_num + 1 - i))
                 return ZERO
         try:
             web3.eth.waitForTransactionReceipt(tx_hash)
+            while web3.eth.getBlock('latest').number - web3.eth.getTransactionReceipt(tx_hash).blockNumber < 2:
+                time.sleep(1)
             return web3.toHex(contract.functions.get_blockhash(b_num - MANY + 1).call())
         except:
-            print('Handling timeout exception. Swith WS provider')
-            if web3.providers[0] == WS1:
-                web3.providers[0] = WS2
-            else:
-                web3.providers[0] = WS1
-            time.sleep(120)
-            for contract_call in contract_calls:
-                if contract_call is not None:
-                    if web3.eth.getTransactionReceipt(contract_call[0]) is None:
-                        contract_call[1].transact({'nonce': contract_call[2]})
+            print('Doing something here to Handle timeout exception.')
+            web3.eth.waitForTransactionReceipt(tx_hash, 1800)
+            web3.personal.unlockAccount(web3.eth.accounts[0], pwd)
             return web3.toHex(contract.functions.get_blockhash(b_num - MANY + 1).call())
+        #     if web3.providers[0] == WS1:
+        #         web3.providers[0] = WS2
+        #     else:
+        #         web3.providers[0] = WS1
+        #     time.sleep(120)
+        #     for contract_call in contract_calls:
+        #         if contract_call is not None:
+        #             if web3.eth.getTransactionReceipt(contract_call[0]) is None:
+        #                 contract_call[1].transact({'nonce': contract_call[2]})
+        #     return web3.toHex(contract.functions.get_blockhash(b_num - MANY + 1).call())
     else:
         return ZERO
 
@@ -129,7 +142,7 @@ def insert_many_old_blockhashes(b_num):
 if __name__ == '__main__':
     web3, contract, pwd = init()
     #latest_block = web3.eth.getBlock('latest').number
-    latest_block = 4461816
+    latest_block = 4448000
     for block_num in range(latest_block - 1, 4000000 - 1, -1):
         if web3.toHex(contract.functions.get_blockhash(block_num).call()) == ZERO:
             try:

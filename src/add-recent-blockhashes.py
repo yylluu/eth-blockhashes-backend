@@ -68,7 +68,7 @@ if __name__ == '__main__':
         try:
             latest_block = web3.eth.getBlock('latest').number
             print('Latest block: %d' % latest_block)
-            for i in range(99, -1, -1):
+            for i in range(250, -1, -1):
                 insert_recent_blockhash(latest_block - i)
             web3.personal.unlockAccount(web3.eth.accounts[1], password)
             web3.eth.defaultAccount = web3.eth.accounts[1]
