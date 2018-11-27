@@ -6,6 +6,7 @@ from ethereum import block
 from ethereum.utils import (
     normalize_address, bytes_to_int
 )
+from utils.utils import to_blockheader
 
 ZERO = '0x0000000000000000000000000000000000000000000000000000000000000000'
 GWEI = 1000000000
@@ -17,7 +18,10 @@ def init():
     abi = '[{"constant":false,"inputs":[{"name":"n","type":"uint256"},{"name":"child_header","type":"bytes"}],"name":"add_old","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"","type":"uint256"}],"name":"hashes","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"n","type":"uint256"}],"name":"get_blockhash","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"n","type":"uint256"}],"name":"add_recent","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"anonymous":false,"inputs":[{"indexed":false,"name":"msg","type":"string"}],"name":"Error","type":"event"}]'
     bin = '0x608060405234801561001057600080fd5b50610446806100206000396000f300608060405260043610610062576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168063440397e114610067578063501895ae146100da578063baa2ff0114610123578063c1f979ab1461016c575b600080fd5b34801561007357600080fd5b506100d860048036038101908080359060200190929190803590602001908201803590602001908080601f0160208091040260200160405190810160405280939291908181526020018383808284378201915050505050509192919290505050610199565b005b3480156100e657600080fd5b5061010560048036038101908080359060200190929190505050610343565b60405180826000191660001916815260200191505060405180910390f35b34801561012f57600080fd5b5061014e6004803603810190808035906020019092919050505061035b565b60405180826000191660001916815260200191505060405180910390f35b34801561017857600080fd5b5061019760048036038101908080359060200190929190505050610377565b005b60006060600080600080600188018152602001908152602001600020549350846040518082805190602001908083835b6020831015156101ee57805182526020820191506020810190506020830392506101c9565b6001836020036101000a038019825116818451168082178552505050505050905001915050604051809103902060001916846000191614151561022d57fe5b60206040519080825280601f01601f1916602001820160405280156102615781602001602082028038833980820191505090505b509250600091505b602082101561031957846004830181518110151561028357fe5b9060200101517f010000000000000000000000000000000000000000000000000000000000000090047f01000000000000000000000000000000000000000000000000000000000000000283838151811015156102dc57fe5b9060200101907effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1916908160001a9053508180600101925050610269565b60208301519050806000808881526020019081526020016000208160001916905550505050505050565b60006020528060005260406000206000915090505481565b6000806000838152602001908152602001600020549050919050565b6000814090506000600102816000191614156103fa577f08c379a0afcc32b1a39302f7cb8073359698411ab5fd6e3edb2c02c0b5fba8aa60405180806020018281038252600f8152602001807f626c6f636b68617368206661696c73000000000000000000000000000000000081525060200191505060405180910390a1610416565b8060008084815260200190815260200160002081600019169055505b50505600a165627a7a723058206f60b72f308387bc08492caa7ab91da704d36290d75d1e66c14786facb3245960029'
     addr = Web3.toChecksumAddress('0xb11ea8d6bab4c557a781785425a2c5654f882663')
-    w3 = Web3(WS1)
+    # abi = '[{"constant":false,"inputs":[{"name":"n","type":"uint256"},{"name":"child_header","type":"bytes"}],"name":"add_old","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"","type":"uint256"}],"name":"hashes","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"n","type":"uint256"}],"name":"get_blockhash","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"n","type":"uint256"}],"name":"add_recent","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"anonymous":false,"inputs":[{"indexed":false,"name":"msg","type":"string"}],"name":"Error","type":"event"}]'
+    # bin = '0x608060405234801561001057600080fd5b50610433806100206000396000f300608060405260043610610062576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168063440397e114610067578063501895ae146100da578063baa2ff0114610123578063c1f979ab1461016c575b600080fd5b34801561007357600080fd5b506100d860048036038101908080359060200190929190803590602001908201803590602001908080601f0160208091040260200160405190810160405280939291908181526020018383808284378201915050505050509192919290505050610199565b005b3480156100e657600080fd5b5061010560048036038101908080359060200190929190505050610252565b60405180826000191660001916815260200191505060405180910390f35b34801561012f57600080fd5b5061014e6004803603810190808035906020019092919050505061026a565b60405180826000191660001916815260200191505060405180910390f35b34801561017857600080fd5b5061019760048036038101908080359060200190929190505050610286565b005b6000806000600185018152602001908152602001600020549050816040518082805190602001908083835b6020831015156101e957805182526020820191506020810190506020830392506101c4565b6001836020036101000a038019825116818451168082178552505050505050905001915050604051809103902060001916816000191614151561022857fe5b610233826004610329565b6000808581526020019081526020016000208160001916905550505050565b60006020528060005260406000206000915090505481565b6000806000838152602001908152602001600020549050919050565b600081409050600060010281600019161415610309577f08c379a0afcc32b1a39302f7cb8073359698411ab5fd6e3edb2c02c0b5fba8aa60405180806020018281038252600f8152602001807f626c6f636b68617368206661696c73000000000000000000000000000000000081525060200191505060405180910390a1610325565b8060008084815260200190815260200160002081600019169055505b5050565b60008060008090505b60208110156103fc576008810260ff7f0100000000000000000000000000000000000000000000000000000000000000028683870181518110151561037357fe5b9060200101517f010000000000000000000000000000000000000000000000000000000000000090047f010000000000000000000000000000000000000000000000000000000000000002167effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1916600019169060020a9004821791508080600101915050610332565b8192505050929150505600a165627a7a7230582000e018f38a4aa6996406ef388a96216c25eaa7c81aa4be8ae11eb3b84a9ad6d30029'
+    # addr = Web3.toChecksumAddress('0x63168d68ac5Dbb10380E8B0E6a61355044Aa11Fa')
+    w3 = Web3([WS2, WS1])
     if w3.isConnected():
         print("Connected to:" + w3.version.node)
         if w3.eth.syncing:
@@ -81,7 +85,7 @@ def insert_old_blockhash(b_num):
 
 
 def insert_many_old_blockhashes(b_num):
-    MANY = 512
+    MANY = 800
     contract_calls = [None] * MANY
     web3.personal.unlockAccount(web3.eth.accounts[0], pwd)
     web3.eth.defaultAccount = web3.eth.accounts[0]
@@ -89,61 +93,50 @@ def insert_many_old_blockhashes(b_num):
     if web3.toHex(contract.functions.get_blockhash(b_num + 1).call()) != ZERO:
         tx_hash = ZERO
         for i in range(0, MANY):
-            child_header = web3.toHex(block_to_rlp_encoded_header(web3.eth.getBlock(b_num + 1 - i)))
+            child_header = web3.toHex(rlp.encode(to_blockheader(web3.eth.getBlock(b_num + 1 - i))))
             print(child_header)
             print('Inserting hash of block at %d ...' % (b_num - i))
             try:
                 if web3.toHex(contract.functions.get_blockhash(b_num - i).call()) == ZERO:
                     contract_function_add_old = contract.functions.add_old(b_num - i, child_header)
-                    tx_hash = contract_function_add_old.transact({'nonce': nonce + i, 'gas': 110000})
+                    tx_hash = contract_function_add_old.transact({'nonce': nonce + i, 'gas': 110000, 'gasPrice': GWEI * 5})
                     contract_calls[i] = [tx_hash, contract_function_add_old, nonce+i]
                     # time.sleep(1)
                     print(web3.toHex(tx_hash))
                 else:
                     print("hash has been stored... skipping")
-                    try:
-                        web3.eth.waitForTransactionReceipt(tx_hash)
-                        while web3.eth.getBlock('latest').number - web3.eth.getTransactionReceipt(tx_hash).blockNumber < 2:
-                            time.sleep(1)
-                        return web3.toHex(contract.functions.get_blockhash(b_num - i).call())
-                    except:
-                        print('Doing something here to Handle timeout exception.')
-                        web3.eth.waitForTransactionReceipt(tx_hash, 1800)
-                        web3.personal.unlockAccount(web3.eth.accounts[0], pwd)
-                        return web3.toHex(contract.functions.get_blockhash(b_num - MANY + 1).call())
+                    return wait_confirmation_of_last_tx(tx_hash, b_num, MANY)
             except ValueError as e:
                 print(e)
                 print(web3.eth.getBlock(b_num + 1 - i))
                 return ZERO
-        try:
-            web3.eth.waitForTransactionReceipt(tx_hash)
-            while web3.eth.getBlock('latest').number - web3.eth.getTransactionReceipt(tx_hash).blockNumber < 2:
-                time.sleep(1)
-            return web3.toHex(contract.functions.get_blockhash(b_num - MANY + 1).call())
-        except:
-            print('Doing something here to Handle timeout exception.')
-            web3.eth.waitForTransactionReceipt(tx_hash, 1800)
-            web3.personal.unlockAccount(web3.eth.accounts[0], pwd)
-            return web3.toHex(contract.functions.get_blockhash(b_num - MANY + 1).call())
-        #     if web3.providers[0] == WS1:
-        #         web3.providers[0] = WS2
-        #     else:
-        #         web3.providers[0] = WS1
-        #     time.sleep(120)
-        #     for contract_call in contract_calls:
-        #         if contract_call is not None:
-        #             if web3.eth.getTransactionReceipt(contract_call[0]) is None:
-        #                 contract_call[1].transact({'nonce': contract_call[2]})
-        #     return web3.toHex(contract.functions.get_blockhash(b_num - MANY + 1).call())
+        return wait_confirmation_of_last_tx(tx_hash, b_num, MANY)
     else:
         return ZERO
+
+
+def wait_confirmation_of_last_tx(tx_hash, b_num, MANY):
+    try:
+        block_number = web3.eth.waitForTransactionReceipt(tx_hash, 240).blockNumber
+        while web3.eth.getBlock('latest').number - block_number < 1:
+            time.sleep(1)
+        web3.personal.unlockAccount(web3.eth.accounts[0], pwd)
+        return web3.toHex(contract.functions.get_blockhash(b_num - MANY + 1).call())
+    except:
+        print('Doing something here to Handle timeout exception.')
+        block_number = web3.eth.waitForTransactionReceipt(tx_hash, 1800).blockNumber
+        while web3.eth.getBlock('latest').number - block_number < 2:
+            time.sleep(1)
+        web3.personal.unlockAccount(web3.eth.accounts[0], pwd)
+        return web3.toHex(contract.functions.get_blockhash(b_num - MANY + 1).call())
 
 
 if __name__ == '__main__':
     web3, contract, pwd = init()
     #latest_block = web3.eth.getBlock('latest').number
-    latest_block = 4448000
-    for block_num in range(latest_block - 1, 4000000 - 1, -1):
+    latest_block = 3708500
+    #latest_block = 4510227
+    for block_num in range(latest_block - 1, - 1, -1):
         if web3.toHex(contract.functions.get_blockhash(block_num).call()) == ZERO:
             try:
                 insert_many_old_blockhashes(block_num)
